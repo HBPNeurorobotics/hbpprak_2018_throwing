@@ -1,0 +1,14 @@
+{
+  "camera": {
+    "defaultMode": "free-camera",
+    "sensitivity": {
+      "translation": 1,
+      "rotation": 1
+    }
+  },
+  "autosaveOnExit": {
+    "transferFunctions": {
+      "CSVData": false
+    }
+  }
+}

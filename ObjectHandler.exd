@@ -1,0 +1,138 @@
+import hbp_nrp_excontrol.nrp_states as states
+from smach import StateMachine
+from smach.state import State
+
+from gazebo_msgs.srv import ApplyBodyWrench, GetModelState, DeleteModel, SpawnEntity, SpawnEntityRequest
+from geometry_msgs.msg import Wrench, Vector3, Point
+import rospy
+from rospy import ServiceProxy, wait_for_service
+
+
+FINISHED = 'FINISHED'
+ERROR = 'ERROR'
+PREEMPTED = 'PREEMPTED'
+
+sm = StateMachine(outcomes=[FINISHED, ERROR, PREEMPTED])
+
+import hbp_nrp_excontrol.nrp_states as states
+
+cylinder_name = "cylinder"
+cylinder_sdf_xml = """
+<?xml version='1.0'?>
+<sdf version='1.5'>
+  <model name='{cylinder_name}'>
+    <pose frame="">-0.37797 -0.25321 1.12015 0 0 0</pose>
+    <static>0</static>
+    <link name='{cylinder_name}'>
+      <pose frame="">0 0 0 0 0 0</pose>
+      <inertial>
+        <mass>0.1</mass>
+        <inertia>
+          <ixx>0.000129</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.000129</iyy>
+          <iyz>0</iyz>
+          <izz>3.78e-05</izz>
+        </inertia>
+      </inertial>
+      <collision name="collision">
+        <geometry>
+          <cylinder>
+            <radius>0.0275</radius>
+            <length>0.115</length>
+          </cylinder>
+        </geometry>
+        <max_contacts>10</max_contacts>
+        <surface>
+          <contact>
+            <ode/>
+          </contact>
+          <bounce/>
+          <friction>
+            <torsional>
+              <ode/>
+            </torsional>
+            <ode/>
+          </friction>
+        </surface>
+      </collision>
+      <visual name="visual">
+        <geometry>
+          <cylinder>
+            <radius>0.0275</radius>
+            <length>0.115</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <script>
+            <uri>file://media/materials/scripts/gazebo.material</uri>
+            <name>Gazebo/Blue</name>
+          </script>
+        </material>
+      </visual>
+      <self_collide>0</self_collide>
+      <kinematic>0</kinematic>
+      <gravity>1</gravity>
+    </link>
+  </model>
+</sdf>
+"""
+
+class NewCylinderState(State):
+    def __init__(self, cylinder_name, sdf_xml, outcomes=['success', 'aborted']):
+        super(NewCylinderState, self).__init__(outcomes=outcomes)
+        self._cylinder_name = cylinder_name
+        self._spawn_proxy = rospy.ServiceProxy('/gazebo/spawn_sdf_entity',
+                                               SpawnEntity, persistent=True)
+        self._cylinder_msg = SpawnEntityRequest()
+        self._cylinder_msg.entity_name = self._cylinder_name
+        self._cylinder_msg.entity_xml = sdf_xml.format(cylinder_name=cylinder_name)
+        self._cylinder_msg.initial_pose.position.x = -0.37797
+        self._cylinder_msg.initial_pose.position.y = -0.25321
+        self._cylinder_msg.initial_pose.position.z = 1.12015
+        self._cylinder_msg.reference_frame = "world"
+
+    def execute(self, userdata):
+        self._spawn_proxy(self._cylinder_msg)
+        return 'success'
+
+class FlyingCylinderState(State):
+    def __init__(self, cylinder_name, rate=1., outcomes=['success', 'aborted'], ):
+        super(FlyingCylinderState, self).__init__(outcomes=outcomes)
+        self._rate = rospy.Rate(rate)
+        self._cylinder_name = cylinder_name
+        self._state_proxy = ServiceProxy('/gazebo/get_model_state',
+                                         GetModelState, persistent=True)
+        self._delete_proxy = ServiceProxy('/gazebo/delete_model',
+                                         DeleteModel, persistent=True)
+
+    def execute(self, userdata):
+        start_time = rospy.Time.now()
+        while not self.cylinder_lower_than(0.2):
+            self._rate.sleep()
+        self._delete_proxy(self._cylinder_name)
+        return 'success'
+
+    def cylinder_lower_than(self, z_threshold):
+        try:
+            current_cylinder_state = self._state_proxy(cylinder_name, "world")
+        except rospy.ServiceException as exc:
+            clientLogger.info(str(exc))
+            return False
+        return current_cylinder_state.pose.position.z < z_threshold
+
+
+with sm:
+    StateMachine.add(
+      "new_cylinder",
+      NewCylinderState(cylinder_name, cylinder_sdf_xml),
+      transitions = {"success": "flying_cylinder",
+                     "aborted": ERROR}
+    )
+    StateMachine.add(
+     "flying_cylinder",
+     FlyingCylinderState(cylinder_name),
+     transitions = {"success": "new_cylinder",
+                    "aborted": ERROR}
+    )
