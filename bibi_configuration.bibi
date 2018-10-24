@@ -1,10 +1,10 @@
-<bibi 
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+<bibi
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xmlns="http://schemas.humanbrainproject.eu/SP10/2014/BIBI" xsi:schemaLocation="http://schemas.humanbrainproject.eu/SP10/2014/BIBI ../bibi_configuration.xsd">
   <brainModel>
     <file>idle_brain.py</file>
   </brainModel>
   <bodyModel assetPath="arm_robot" customAsset="false">arm_robot_gripper.sdf</bodyModel>
-  <transferFunction xsi:type="PythonTransferFunction" src="arm_control.py" />
-  <transferFunction xsi:type="PythonTransferFunction" src="hand_control.py" />
+  <transferFunction xsi:type="PythonTransferFunction" src="simple_move_robot.py" />
+  <transferFunction xsi:type="PythonTransferFunction" src="grab_image.py" />
 </bibi>
