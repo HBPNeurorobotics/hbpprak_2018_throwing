@@ -4,9 +4,10 @@ from smach.state import State
 
 from gazebo_msgs.srv import ApplyBodyWrench, GetModelState, DeleteModel, SpawnEntity, SpawnEntityRequest
 from geometry_msgs.msg import Wrench, Vector3, Point
+from std_msgs.msg import Float32
 import rospy
 from rospy import ServiceProxy, wait_for_service
-
+from hbp_nrp_excontrol.logs import clientLogger
 
 FINISHED = 'FINISHED'
 ERROR = 'ERROR'
@@ -98,7 +99,7 @@ class NewCylinderState(State):
         return 'success'
 
 class FlyingCylinderState(State):
-    def __init__(self, cylinder_name, rate=1., outcomes=['success', 'aborted'], ):
+    def __init__(self, cylinder_name, rate=1., outcomes=['success', 'aborted'], max_hit_duration=10):
         super(FlyingCylinderState, self).__init__(outcomes=outcomes)
         self._rate = rospy.Rate(rate)
         self._cylinder_name = cylinder_name
@@ -106,13 +107,26 @@ class FlyingCylinderState(State):
                                          GetModelState, persistent=True)
         self._delete_proxy = ServiceProxy('/gazebo/delete_model',
                                          DeleteModel, persistent=True)
+        self._distance_topic = rospy.Publisher('/cylinder_distance', Float32, queue_size=10)
+        self.max_hit_duration=10
 
     def execute(self, userdata):
         start_time = rospy.Time.now()
-        while not self.cylinder_lower_than(0.2):
+        while not self.cylinder_lower_than(0.2) and (rospy.Time.now() - start_time) < rospy.Duration(self.max_hit_duration):
             self._rate.sleep()
+        cylinder_pos = self.get_cylinder_distance()
+        clientLogger.advertise("Cylinder distance: {}".format(cylinder_pos))
+        self._distance_topic.publish(Float32(cylinder_pos))
         self._delete_proxy(self._cylinder_name)
         return 'success'
+
+    def get_cylinder_distance(self):
+      try:
+          current_cylinder_state = self._state_proxy(cylinder_name, "world")
+      except rospy.ServiceException as exc:
+          clientLogger.error(str(exc))
+          return -1000.0
+      return -current_cylinder_state.pose.position.y
 
     def cylinder_lower_than(self, z_threshold):
         try:
