@@ -1,16 +1,15 @@
 <?xml version="1.0" ?>
 <ns1:ExD xmlns:ns1="http://schemas.humanbrainproject.eu/SP10/2014/ExDConfig" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-  <ns1:name>HoLLie arm manipulation demo experiment</ns1:name>
-  <ns1:thumbnail>ExDDemoManipulation.jpg</ns1:thumbnail>
-  <ns1:description>The experiment shows the HoLLie arm performing an infinite grasping task controlled by a SMACH state machine.
-        The robot clears the table of the two cylindrical objects placed on it, disposing of them in the container beside.</ns1:description>
-  <ns1:tags>hollie arm manipulation demo empty robotics</ns1:tags>
-  <ns1:timeout>999999999.0</ns1:timeout>
+  <ns1:name>2018 HBP Praktikum Throwing Experiment</ns1:name>
+  <ns1:thumbnail>hbpprak_2018.png</ns1:thumbnail>
+  <ns1:description>The schunk LWA4P arm should learn how to throw objects away from the table.</ns1:description>
+  <ns1:tags>hollie arm manipulation demo fzi praktikum robotics</ns1:tags>
+  <ns1:timeout>9999999.0</ns1:timeout>
   <ns1:configuration src="ExDDemoManipulation.ini" type="3d-settings"/>
   <ns1:configuration src="brainvisualizer.json" type="brainvisualizer"/>
   <ns1:configuration src="ExDDemoManipulation.uis" type="user-interaction-settings"/>
   <ns1:maturity>production</ns1:maturity>
-  <ns1:environmentModel src="world_manipulation.sdf">
+  <ns1:environmentModel src="world_throwing.sdf">
     <ns1:robotPose pitch="-0.0" roll="0.0" x="0.0" y="0.0" yaw="3.14159265359" z="0.04"/>
   </ns1:environmentModel>
   <ns1:bibiConf src="bibi_configuration.bibi"/>
